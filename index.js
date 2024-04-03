@@ -104,14 +104,6 @@ app.post("/login", async (req, res) => {
 // Protected route
 app.get("/getallusers", verifyToken, async (req, res) => {
   try {
-    const token = req.headers.authorization;
-    if (!token) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-    const decoded = jwt.verify(token, process.env.PASSWORD_SECRET);
-    if (!decoded) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
     const data = await User.find();
     return res.status(200).json(data);
   } catch (error) {
