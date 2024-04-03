@@ -11,6 +11,7 @@ const path = require("path");
 const User = require("./Models/User.schema");
 const cors = require("cors");
 require("dotenv").config({ path: path.resolve(process.cwd(), ".env") });
+const verifyToken = require("./middlewares/verifyToken");
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -101,7 +102,7 @@ app.post("/login", async (req, res) => {
 });
 
 // Protected route
-app.get("/getallusers", async (req, res) => {
+app.get("/getallusers", verifyToken, async (req, res) => {
   try {
     const token = req.headers.authorization;
     if (!token) {
