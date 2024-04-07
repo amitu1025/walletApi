@@ -26,6 +26,9 @@
     "tiny-secp256k1": "^2.2.3"
   },
   "devDependencies": {
-    "cors": "^2.8.5"
+    "bitcoinjs-message": "^2.2.0",
+    "cors": "^2.8.5",
+    "ecpair": "^2.1.0",
+    "express-validator": "^7.0.1"
   }
 }
