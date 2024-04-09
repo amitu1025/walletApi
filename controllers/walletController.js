@@ -10,6 +10,11 @@ const bip32 = BIP32Factory(ecc);
 const { ECPairFactory } = require("ecpair");
 const ECPair = ECPairFactory(ecc);
 const bitcoinMessage = require("bitcoinjs-message");
+const encryptAES = require("../middlewares/encryptAES");
+const decryptAES = require("../middlewares/decryptAES");
+const generateHash = require("../middlewares/generateHash");
+const crypto = require("crypto");
+const fs = require("fs");
 
 const derivationPath = "m/44'/0'/0'/0/0";
 
@@ -125,6 +130,119 @@ class WalletController {
       return res.status(200).json(userDetail);
     } catch (error) {
       return res.status(401).json({ error: "Unauthorized" });
+    }
+  }
+
+  // Symmetric encryption using 3des cypher text
+  static async generateAesEncryption(req, res) {
+    try {
+      const { text } = req?.body;
+      const secretKey = process.env.PASSWORD_SECRET;
+      const key = generateHash(secretKey);
+      const encrypted = encryptAES(text, key);
+      return res.status(200).json(encrypted);
+    } catch (error) {
+      console.log("error", error);
+      return res.status(401).json({ error: "Internal server error.", error });
+    }
+  }
+
+  // Symmetric decryption using 3des cypher text
+  static async getAesDecryption(req, res) {
+    try {
+      const { encrypted } = req?.body;
+      const secretKey = process.env.PASSWORD_SECRET;
+      const key = generateHash(secretKey);
+      const message = decryptAES(encrypted, key);
+      console.log("message", message);
+      return res.status(200).json(message);
+    } catch (error) {
+      console.log("error", error);
+      return res.status(401).json({ error: "Internal server error.", error });
+    }
+  }
+
+  static async generateRsaEncryption(req, res) {
+    try {
+      const { text } = req?.body;
+
+      const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+        // The standard secure default length for RSA keys is 2048 bits
+        modulusLength: 2048,
+      });
+      // To export the public key and write it to file:
+      const exportedPublicKeyBuffer = publicKey.export({
+        type: "pkcs1",
+        format: "pem",
+      });
+      fs.writeFileSync("public.pem", exportedPublicKeyBuffer, {
+        encoding: "utf-8",
+      });
+      const exportedPrivateKeyBuffer = privateKey.export({
+        type: "pkcs1",
+        format: "pem",
+      });
+      fs.writeFileSync("private.pem", exportedPrivateKeyBuffer, {
+        encoding: "utf-8",
+      });
+
+      const dataToEncrypt = fs.readFileSync("data_to_encrypt.txt", {
+        encoding: "utf-8",
+      });
+
+      const currentPublicKey = Buffer.from(
+        fs.readFileSync("public.pem", { encoding: "utf-8" })
+      );
+
+      const encryptedData = crypto.publicEncrypt(
+        {
+          key: currentPublicKey,
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+          oaepHash: "sha256",
+        },
+        // We convert the data string to a buffer using `Buffer.from`
+        Buffer.from(dataToEncrypt)
+      );
+
+      fs.writeFileSync("encrypted_data.txt", encryptedData.toString("base64"), {
+        encoding: "utf-8",
+      });
+
+      return res.status(200).json(encryptedData.toString("base64"));
+    } catch (error) {
+      console.log("error", error);
+      return res.status(401).json({ error: "Internal server error.", error });
+    }
+  }
+
+  // Symmetric decryption using 3des cypher text
+  static async getRsaDecryption(req, res) {
+    try {
+      // OAEP: Optimal asymmetric encryption padding
+      const encryptedData = fs.readFileSync("encrypted_data.txt", {
+        encoding: "utf-8",
+      });
+      const privateKey = fs.readFileSync("private.pem", { encoding: "utf-8" });
+
+      const decryptedData = crypto.privateDecrypt(
+        {
+          key: privateKey,
+          // In order to decrypt the data, we need to specify the
+          // same hashing function and padding scheme that we used to
+          // encrypt the data in the previous step
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+          oaepHash: "sha256",
+        },
+        Buffer.from(encryptedData, "base64")
+      );
+
+      fs.writeFileSync("decrypted_data.txt", decryptedData.toString("utf-8"), {
+        encoding: "utf-8",
+      });
+      return res.status(200).json(decryptedData.toString("utf-8"));
+    } catch (error) {
+      console.log("error", error);
+      return res.status(401).json({ error: "Internal server error.", error });
     }
   }
 

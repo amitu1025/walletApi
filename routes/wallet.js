@@ -25,4 +25,10 @@ router.post("/verify-signature", WalletController.verifyMessageSignature);
 // only authenticated user can access this route path
 router.post("/getloggedinuser", verifyToken, WalletController.getLoggedInUser);
 
+router.post("/encryptmessage", WalletController.generateAesEncryption);
+router.post("/decryptmessage", WalletController.getAesDecryption);
+
+router.post("/encryptrsa", WalletController.generateRsaEncryption);
+router.post("/decryptrsa", WalletController.getRsaDecryption);
+
 module.exports = router;
